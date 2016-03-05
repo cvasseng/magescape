@@ -35,6 +35,7 @@ me.Actor = function (map, attributes) {
       }, attributes),
       pos = properties.pos,
       opos = {x: 0, y: 0},
+      dir = {x: 0, y: 0},
       alive = true,
       events = me.Events(),
       exports = {},
@@ -44,9 +45,8 @@ me.Actor = function (map, attributes) {
 
   /////////////////////////////////////////////////////////////////////////////
 
-  //Move to the left
-  function moveLeft() {
-    var a = map.actors.collision(pos.x - 1, pos.y);
+  function move(nx, ny) {
+    var a = map.actors.collision(Math.floor(nx), Math.floor(ny));
 
     if (a) {
       events.emit('Bump', exports);
@@ -54,79 +54,76 @@ me.Actor = function (map, attributes) {
     }
 
 
-    if (!map.data.collision(pos.x - 1, pos.y)) { 
-      pos.x -= 1;
-      events.emit('Move', exports);
-      opos.y = pos.y;
-      opos.x = pos.x;
+    if (!map.data.collision(Math.floor(nx), Math.floor(ny))) {             
+      setPos(nx, ny);
     }
+  }
+
+  //Move to the left
+  function moveLeft() {    
+    move(pos.x - 1, pos.y);
   }
 
   //Move to the right
   function moveRight() {
-    var a = map.actors.collision(pos.x + 1, pos.y);
-
-    if (a) {
-      events.emit('Bump', exports);
-      return;
-    }
-
-    if (!map.data.collision(pos.x + 1, pos.y)) {
-      pos.x += 1;
-      events.emit('Move', exports);
-      opos.y = pos.y;
-      opos.x = pos.x;
-    }
+    move(pos.x + 1, pos.y);
   }
 
   //Move up
   function moveUp() {
-    var a = map.actors.collision(pos.x, pos.y - 1);
-
-    if (a) {
-      events.emit('Bump', exports);
-      return;
-    }
-
-    if (!map.data.collision(pos.x, pos.y - 1)) {
-      pos.y -= 1;
-      events.emit('Move', exports);
-      opos.y = pos.y;
-      opos.x = pos.x;
-    }
+    move(pos.x, pos.y - 1);
   }
 
   //Move down
   function moveDown() {
-    var a = map.actors.collision(pos.x, pos.y + 1);
-
-    if (a) {
-      events.emit('Bump', exports);
-      return;
-    }
-
-    if (!map.data.collision(pos.x, pos.y + 1)) {
-      pos.y += 1;
-      events.emit('Move', exports);
-      opos.y = pos.y;
-      opos.x = pos.x;
-    }
+    move(pos.x, pos.y + 1);
   }
 
   //Set position
-  function setPos(x, y) {
-    if (!y && x && x.y && x.x) {
-      y = x.y;
-      x = x.x;
-    }    
+  function setPos(nx, ny) {
+    var int = 0,
+        t = (new Date()).getTime(),
+        d = 500,
+        ox = pos.x,
+        oy = pos.y
+    ;
 
-    pos.x = x;
-    pos.y = y;
+    function step(x, y) {
+      if (!y && x && x.y && x.x) {
+        y = x.y;
+        x = x.x;
+      }    
 
-    events.emit('Move', exports);
-    
-    opos.x = pos.x;
-    opos.y = pos.y;
+      console.log('step', x, y);
+
+      pos.x = x;
+      pos.y = y;
+
+      events.emit('Move', exports);
+      
+      opos.x = pos.x;
+      opos.y = pos.y;
+    }
+
+    step(nx, ny); 
+    // int = setInterval(function () {
+    //   var t0 = (new Date()).getTime() - t,
+    //       t1 = t0 / d
+    //   ;
+      
+
+    //   console.log(t0, t1);
+
+    //   step(
+    //     me.lerp(ox, nx, t1),
+    //     me.lerp(oy, ny, t1)
+    //   );
+      
+    //   if (t0 > d) {
+    //     clearInterval(int);
+    //   }
+    // }, 10);
+
   }
 
   //Use a skill
@@ -191,7 +188,8 @@ me.Actor = function (map, attributes) {
     pos: getPos,
     opos: getOPos,
     kill: kill,
-    freeze: freeze
+    freeze: freeze,
+    dir: dir
   };
 
   return exports;

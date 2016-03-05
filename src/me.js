@@ -87,5 +87,10 @@ var me = {
   //Returns true if what is a basic type 
   isBasic: function (what) {
     return !me.isArr(what) && (me.isStr(what) || me.isNum(what) || me.isBool(what) || me.isFn(what));
+  },
+
+  //Linear interpolation
+  lerp: function(a, b, f) {
+    return (a * (1 - f)) + (b * f);
   }
 };

@@ -39,8 +39,14 @@ me.Projectile = function (attrs, map, originator) {
         range: 3,
         tileIndex: 29
       }, attrs),
-      pos = properties.pos,
-      opos = {x: 0, y: 0},
+      pos = {
+        x: properties.pos.x + properties.dir.x,
+        y: properties.pos.y + properties.dir.y
+      },
+      opos = {
+        x: pos.x, 
+        y: pos.y
+      },
       events = me.Events()
   ;
 
@@ -58,20 +64,24 @@ me.Projectile = function (attrs, map, originator) {
       ac = map.actors.collision(nx, ny);
       
 
-      if (ac !== false) {
+      if (ac !== false) {        
         events.emit('Hit', ac);      
+        events.emit('Kill', ac); 
         return false;
       }
 
       if (map.data.collision(nx, ny)) {
+        events.emit('Kill', ac); 
         return false;
       }
 
-      opos.x = pos.x;
-      opos.y = pos.y;
-
       pos.x = nx;
       pos.y = ny;
+      
+      events.emit('Step');
+
+      opos.x = pos.x;
+      opos.y = pos.y;
       
       s--;
     }

@@ -38,8 +38,14 @@ me.Map = function (attributes, tileset) {
       events = me.Events(),
       data = [],      
       canvas = document.createElement('canvas'),
+
+      backgroundLayer = document.createElement('canvas'),
       spriteLayer = document.createElement('canvas'),
       projectileLayer = document.createElement('canvas'),
+      indicatorLayer = document.createElement('canvas'),
+
+      enableIndicators = false,
+
       ctx = canvas.getContext('2d'),
       sctx = spriteLayer.getContext('2d'),
       pctx = projectileLayer.getContext('2d'),
@@ -47,6 +53,108 @@ me.Map = function (attributes, tileset) {
       projectiles = [],
       exports = {}
   ;
+
+  /////////////////////////////////////////////////////////////////////////////
+
+  //Start drawing functions
+
+  function clear(pos, target) {
+    var c = (target || canvas).getContext('2d');
+    c.clearRect(
+      pos.x * properties.drawSize,
+      pos.y * properties.drawSize,
+      properties.drawSize,
+      properties.drawSize
+    );
+  }
+
+  function indicatorsEnable(flag) {
+    if (enableIndicators && flag === false) {
+      indicatorLayer.getContext('2d').clearRect(0, 0, indicatorLayer.width, indicatorLayer.height);
+      assemble();
+    } 
+    enableIndicators = flag;
+  }
+
+  function drawDirectionLine(from, to) {
+    var c = indicatorLayer.getContext('2d');
+    c.clearRect(0, 0, indicatorLayer.width, indicatorLayer.height);
+    c.strokeStyle = '#AA3333';
+    c.beginPath();
+    c.moveTo(from.x * properties.drawSize, from.y  * properties.drawSize);
+    c.lineTo(to.x  * properties.drawSize, to.y  * properties.drawSize);
+    c.closePath();
+    c.stroke();
+    assemble();
+  }
+
+  function blitThing(thing, target) {
+    if (tileset) {
+      tileset.blit(
+        target || canvas, 
+        thing.properties.tileIndex, 
+        thing.pos().x * properties.drawSize, 
+        thing.pos().y * properties.drawSize, 
+        properties.tileSize, 
+        properties.drawSize, 
+        properties.drawSize
+      );
+    }
+  }
+
+  function redrawActors() {
+    sctx.clearRect(0, 0, spriteLayer.width, spriteLayer.height);
+    actors.forEach(function (actor) {
+      blitThing(actor, spriteLayer);
+    });
+  }
+
+   //Copy tile from one layer to the main layer
+  function cpyTile(x, y, source) {
+    ctx.drawImage(
+      source,
+
+      x * properties.drawSize,
+      y * properties.drawSize,
+      properties.drawSize,
+      properties.drawSize,
+
+      x * properties.drawSize,
+      y * properties.drawSize,
+      properties.drawSize,
+      properties.drawSize
+    );
+  }
+
+  //Copy current cullbox 
+  function cpyBox(source) {
+    ctx.drawImage(
+      source,
+
+      0,
+      0,
+      canvas.width,
+      canvas.height,
+
+      0,
+      0,
+      canvas.width,
+      canvas.height
+    );
+  }
+
+  //Assemble the layers
+  function assemble() {
+    ctx.clearRect(0, 0, indicatorLayer.width, indicatorLayer.height);
+    cpyBox(backgroundLayer);
+    if (enableIndicators) {
+      cpyBox(indicatorLayer);      
+    }
+    cpyBox(spriteLayer);
+    cpyBox(projectileLayer);
+  }
+
+  //End drawing functions
 
   /////////////////////////////////////////////////////////////////////////////
 
@@ -80,11 +188,11 @@ me.Map = function (attributes, tileset) {
       x = x.x;
     }
 
-    //Blit the background
+    //Blit to the background layer
     convert(x, y, function (index) {
       if (tileset) {
         tileset.blit(
-          canvas, 
+          backgroundLayer, 
           data[index], 
           x * properties.drawSize, 
           y * properties.drawSize, 
@@ -95,30 +203,19 @@ me.Map = function (attributes, tileset) {
       }
     });
 
+    //Blit background to the main layer
+    cpyTile(x, y, backgroundLayer);
+
+    if (enableIndicators) {
+      //Blit the indicator layer
+      cpyTile(x, y, indicatorLayer);      
+    }
+
     //Blit the sprite layer
-    ctx.drawImage(
-      spriteLayer,
+    cpyTile(x, y, spriteLayer);
 
-      x * properties.drawSize,
-      y * properties.drawSize,
-      properties.drawSize,
-      properties.drawSize,
-
-      x * properties.drawSize,
-      y * properties.drawSize,
-      properties.drawSize,
-      properties.drawSize
-    );
-
-  }
-
-  //Draw whole map
-  function drawMap() {
-
-  }
-
-  //Clear the map
-  function clear() {
+    //Blit the projectile layer
+    cpyTile(x, y, projectileLayer);
 
   }
 
@@ -142,41 +239,6 @@ me.Map = function (attributes, tileset) {
     return res;
   }
 
-  function clear(pos, target) {
-    if (tileset) {
-      tileset.blit(
-        target || canvas, 
-        0, 
-        pos.x * properties.drawSize, 
-        pos.y * properties.drawSize, 
-        properties.tileSize, 
-        properties.drawSize, 
-        properties.drawSize
-      );
-    }
-  }
-
-  function blitThing(thing, target) {
-    if (tileset) {
-      tileset.blit(
-        target || canvas, 
-        thing.properties.tileIndex, 
-        thing.pos().x * properties.drawSize, 
-        thing.pos().y * properties.drawSize, 
-        properties.tileSize, 
-        properties.drawSize, 
-        properties.drawSize
-      );
-    }
-  }
-
-  function redrawActors() {
-    sctx.clearRect(0, 0, spriteLayer.width, spriteLayer.height);
-    actors.forEach(function (actor) {
-      blitThing(actor, spriteLayer);
-    });
-  }
-
   //Add actor
   function addActor(actor) {
     function redrawActor() {
@@ -186,13 +248,13 @@ me.Map = function (attributes, tileset) {
       
       if (ft > 0) {        
         sctx.fillStyle = '#FFF';
-        sctx.strokeStyle = '#000';
-        sctx.font = "12px serif";
+        sctx.strokeStyle = '#FFF';
+        sctx.font = "14px 'Patrick Hand', serif";
 
-        sctx.strokeText(
-          ft, 
+        sctx.fillText (
+          'Frozen ' + ft, 
           (actor.pos().x * properties.drawSize) + (properties.drawSize - (properties.drawSize / 2)), 
-          (actor.pos().y * properties.drawSize) + (properties.drawSize - 12)
+          (actor.pos().y * properties.drawSize) - 12
         );
       }
 
@@ -200,8 +262,10 @@ me.Map = function (attributes, tileset) {
       //clear(actor.opos(), spriteLayer);
       // blitThing(actor, spriteLayer);
 
-      redraw(actor.opos());
-      redraw(actor.pos());
+      //redraw(actor.opos());
+      //redraw(actor.pos());
+    
+      assemble();
     }
 
     actor.on('Move', redrawActor);
@@ -217,21 +281,38 @@ me.Map = function (attributes, tileset) {
   }
 
   function fireProjectile(attr, originator) {
-    var projectile = me.Projectile(attr, exports, originator);
-    //redraw(projectile.pos());
-    //blitThing(projectile);
-    projectiles.push(projectile);
-    return projectile;
+    var p = me.Projectile(attr, exports, originator);
+    
+    p.on('Step', function () {
+      //Blit it
+      clear(p.opos(), projectileLayer);
+      clear(p.pos(), projectileLayer);
+      
+      blitThing(p, projectileLayer);
+      
+      redraw(p.opos().x, p.opos().y);
+      redraw(p.pos().x, p.pos().y);
+    });
+
+    p.on('Kill', function () {
+      clear(p.pos(), projectileLayer);
+      clear(p.opos(), projectileLayer);
+      redraw(p.pos().x, p.pos().y);
+      redraw(p.opos().x, p.opos().y);
+    });
+
+    blitThing(p, projectileLayer);
+    redraw(p.pos().x, p.pos().y);
+    
+    projectiles.push(p);
+    return p;
   }
 
   function processTurn() {
     //Update projectiles
     projectiles = projectiles.filter(function (p) {
-      redraw(p.pos());
+      //redraw(p.opos());
       if (p.processTurn()) {
-        //Blit it
-        blitThing(p);
-
         return true;        
       }
       return false;
@@ -242,13 +323,18 @@ me.Map = function (attributes, tileset) {
     });
   }
 
+  
+
   /////////////////////////////////////////////////////////////////////////////
 
   //Init everything
-  spriteLayer.width = canvas.width = properties.width * properties.drawSize;
-  spriteLayer.height = canvas.height = properties.height * properties.drawSize;
+  projectileLayer.width = backgroundLayer.width = indicatorLayer.width = spriteLayer.width = canvas.width = properties.width * properties.drawSize;
+  projectileLayer.height = backgroundLayer.height = indicatorLayer.height = spriteLayer.height = canvas.height = properties.height * properties.drawSize;
 
-  spriteLayer.getContext('2d').imageSmoothingEnabled = ctx.imageSmoothingEnabled = false;
+  backgroundLayer.getContext('2d').imageSmoothingEnabled = false;
+  projectileLayer.getContext('2d').imageSmoothingEnabled = false;
+  spriteLayer.getContext('2d').imageSmoothingEnabled = false;
+  ctx.imageSmoothingEnabled = false;
 
   for (var i = 0; i < properties.width * properties.height; i++) {
     data.push(0);
@@ -260,6 +346,10 @@ me.Map = function (attributes, tileset) {
     properties: properties,
     clear: clear,
     processTurn: processTurn,
+    indicators: {
+      draw: drawDirectionLine,
+      enable: indicatorsEnable
+    },
     actors: {
       add: addActor,
       collision: actorCollision
