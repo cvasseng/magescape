@@ -28,24 +28,52 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 */
 
-me.Tileset = function (attributes) {
-  var img = document.createElement('canvas'),
-      ctx = canvas.getContext('2d')
+me.Tileset = function (filename) {
+  var img = new Image()
   ;
 
   /////////////////////////////////////////////////////////////////////////////
 
   //Blit a tile
-  function blit(ctx, index, x, y, tileSize, width, height) {
+  function blit(canvas, index, x, y, tileSize, width, height) {
+    var ctx = canvas.getContext('2d'),
+        tileSizeX = tileSize || 32,
+        tileSizeY = tileSize || 32,
+        tw,
+        sy,
+        sx
+    ;
 
+    if (img instanceof Image) {
+      tw = Math.floor(img.width / tileSizeX);
+      sy = Math.floor(index / tw);
+      sx = index - (sy * tw);  
+
+      sx = sx * tileSizeX;
+      sy = sy * tileSizeY;   
+      
+      if (sy < img.height && sx < img.width && sx >= 0 && sy >= 0) {
+        ctx.drawImage(  
+          img, 
+          sx, sy, tileSizeX, tileSizeY, 
+          x, y, 
+          width || tileSizeX, 
+          height || tileSizeY
+        );
+      }
+    }
   }
 
   //Load tileset
   function load(filename) {
-
+    img.src = filename;
   }
 
   /////////////////////////////////////////////////////////////////////////////
+
+  if (typeof filename !== 'undefined') {
+    load(filename);
+  }
 
   return {
     blit: blit,

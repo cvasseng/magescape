@@ -30,40 +30,103 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 me.Actor = function (map, attributes) {
   var properties = me.merge({
-
+        tileIndex: 90,
+        pos: {x: 0, y: 0}
       }, attributes),
-      sprite = me.Sprite(),
-      pos = {x: 0, y: 0},
+      pos = properties.pos,
+      opos = {x: 0, y: 0},
       alive = true,
       events = me.Events(),
       exports = {},
-      skills = {}
+      skills = {},
+      frozenTurns = 0
   ;
 
   /////////////////////////////////////////////////////////////////////////////
 
   //Move to the left
   function moveLeft() {
+    var a = map.actors.collision(pos.x - 1, pos.y);
 
-    events.emit('MoveLeft', exports);
+    if (a) {
+      events.emit('Bump', exports);
+      return;
+    }
+
+
+    if (!map.data.collision(pos.x - 1, pos.y)) { 
+      pos.x -= 1;
+      events.emit('Move', exports);
+      opos.y = pos.y;
+      opos.x = pos.x;
+    }
   }
 
   //Move to the right
   function moveRight() {
+    var a = map.actors.collision(pos.x + 1, pos.y);
 
-    events.emit('MoveRight', exports);
+    if (a) {
+      events.emit('Bump', exports);
+      return;
+    }
+
+    if (!map.data.collision(pos.x + 1, pos.y)) {
+      pos.x += 1;
+      events.emit('Move', exports);
+      opos.y = pos.y;
+      opos.x = pos.x;
+    }
   }
 
   //Move up
   function moveUp() {
+    var a = map.actors.collision(pos.x, pos.y - 1);
 
-    events.emit('MoveUp', exports);
+    if (a) {
+      events.emit('Bump', exports);
+      return;
+    }
+
+    if (!map.data.collision(pos.x, pos.y - 1)) {
+      pos.y -= 1;
+      events.emit('Move', exports);
+      opos.y = pos.y;
+      opos.x = pos.x;
+    }
   }
 
   //Move down
   function moveDown() {
+    var a = map.actors.collision(pos.x, pos.y + 1);
 
-    events.emit('MoveDown', exports);
+    if (a) {
+      events.emit('Bump', exports);
+      return;
+    }
+
+    if (!map.data.collision(pos.x, pos.y + 1)) {
+      pos.y += 1;
+      events.emit('Move', exports);
+      opos.y = pos.y;
+      opos.x = pos.x;
+    }
+  }
+
+  //Set position
+  function setPos(x, y) {
+    if (!y && x && x.y && x.x) {
+      y = x.y;
+      x = x.x;
+    }    
+
+    pos.x = x;
+    pos.y = y;
+
+    events.emit('Move', exports);
+    
+    opos.x = pos.x;
+    opos.y = pos.y;
   }
 
   //Use a skill
@@ -85,20 +148,50 @@ me.Actor = function (map, attributes) {
     events.emit('Kill', exports);
   }
 
+  //Get the position
+  function getPos() {
+    return pos;
+  }
+
+  //Get the old position
+  function getOPos() {
+    return opos;
+  }
+
+  //Freeze the actor
+  function freeze() {
+    frozenTurns = 6;
+    events.emit('Frozen', exports, frozenTurns);
+  }
+
+  function processTurn() {
+    if (frozenTurns > 0) {
+      frozenTurns--;
+      events.emit('Frozen', exports, frozenTurns);
+    }
+    events.emit('Turn', exports);
+  }
+
   /////////////////////////////////////////////////////////////////////////////
 
   //Public interface
   exports = {
+    properties: properties,
     on: events.on,
     useSkill: useSkill,
     giveSkill: giveSkill,
+    setPos: setPos,
     moveLeft: moveLeft,
     moveRight: moveRight,
     moveUp: moveUp,
     moveDown: moveDown,
+    processTurn: processTurn,
     isAlive: function () { return alive; },
-    pos: pos,
-    sprite: sprite
+    frozen: function () { return frozenTurns; },
+    pos: getPos,
+    opos: getOPos,
+    kill: kill,
+    freeze: freeze
   };
 
   return exports;

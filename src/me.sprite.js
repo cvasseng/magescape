@@ -28,9 +28,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 */
 
-me.Sprite = function () {
-  var tileset = false
-  ;
+me.Sprite = function (tileset) {
 
   /////////////////////////////////////////////////////////////////////////////
 

@@ -28,6 +28,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 */
 
+
 me.Player = function (map) {
   var actor = me.Actor(map),
       name = 'Magenus Magenasus'

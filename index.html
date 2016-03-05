@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+
+    <link href='http://fonts.googleapis.com/css?family=Roboto:400,300,100,700' rel='stylesheet' type='text/css'>
+
+    
+    <script type="text/javascript" src="src/me.js"></script>
+    <script type="text/javascript" src="src/me.events.js"></script>
+    <script type="text/javascript" src="src/me.actor.js"></script>
+    <script type="text/javascript" src="src/me.tileset.js"></script>
+    <script type="text/javascript" src="src/me.player.js"></script>
+    <script type="text/javascript" src="src/me.projectile.js"></script>
+    <script type="text/javascript" src="src/me.sprite.js"></script>
+    <script type="text/javascript" src="src/me.map.js"></script>
+    
+    <style>
+        html, body {
+            margin: 0;
+            padding: 0;
+        }
+        canvas {
+            background: #000;
+        }
+    </style>
+
+    <title>Magescape</title>
+</head>
+<body>
+  <div id="map"></div>
+</body>
+
+<script>
+
+var tileset = me.Tileset('minirogue-all.png'),
+    map = me.Map({
+
+    }, tileset),
+    actor = me.Actor(map),
+    other = me.Actor(map, {
+        pos: {
+            x: 12,
+            y: 7
+        },
+        tileIndex: 89
+    })
+;
+  
+document.getElementById('map').appendChild(map.canvas);
+
+setTimeout(function () {
+    // map.data.set(0, 0, 1);
+     map.data.set(10, 5, 1);
+    // map.data.set(0, 1, 3);
+    // map.data.set(1, 1, 3);
+    map.actors.add(actor);
+map.actors.add(other);
+}, 400);
+
+
+
+document.onkeydown = function (e) {
+    if (e.code === 'KeyW') {
+        actor.moveUp();
+        map.processTurn();
+    } else if (e.code === 'KeyS') {
+        actor.moveDown();
+        map.processTurn();
+    } else if (e.code === 'KeyD') {
+        actor.moveRight();
+        map.processTurn();
+    } else if (e.code === 'KeyA') {
+        actor.moveLeft();
+        map.processTurn();
+    } else if (e.code === 'KeyE') {
+       var p = map.projectiles.fire({
+            pos: actor.pos(),
+            dir: {x: 1, y: 0},
+            speed: 3
+        });
+
+       p.on('Hit', function (other) {
+            var op = {x: other.pos().x, y: other.pos().y};
+            if (other.frozen() > 0) {
+                other.setPos(actor.pos());
+                actor.setPos(op);
+            } else {
+                other.freeze();                
+            }
+       });
+
+    } else if (e.code === 'KeyT') {
+        map.processTurn();
+    }
+    console.log(e);
+};
+
+</script>
+
+</html>

@@ -52,7 +52,7 @@ me.Events = function () {
 
   //Emit an event
   function emit(what) {
-    var args = Array.prototype.slice.call(arguments);
+    var args = (Array.prototype.slice.call(arguments)).splice(1);
     if (typeof listeners[what] !== 'undefined') {
       Object.keys(listeners[what]).forEach(function (key) {
         listeners[what][key].apply(undefined, args);
