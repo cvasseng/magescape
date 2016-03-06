@@ -14,6 +14,9 @@
     <script type="text/javascript" src="src/me.projectile.js"></script>
     <script type="text/javascript" src="src/me.sprite.js"></script>
     <script type="text/javascript" src="src/me.map.js"></script>
+    <script type="text/javascript" src="src/me.trap.js"></script>
+    <script type="text/javascript" src="src/me.ai.js"></script>
+    <script type="text/javascript" src="src/me.dungen.js"></script>
     
     <style>
         html, body {
@@ -44,32 +47,46 @@
 
 <script>
 
-var tileset = me.Tileset('minirogue-all.png'),
+var tileset = me.Tileset(),
     map = me.Map({
 
     }, tileset),
-    actor = me.Actor(map),
-    other = me.Actor(map, {
+    actor = me.Actor(map, {
         pos: {
-            x: 12,
-            y: 7
+            x: 1,
+            y: 1
         },
-        tileIndex: 89
+        tileIndex: 657
     }),
-    doBeam = false
+
+    doBeam = false,
+    dungen = me.DungeonGen(map)
 ;
   
 document.getElementById('map').appendChild(map.canvas);
 
-setTimeout(function () {
+tileset.on('Load', function () {
     // map.data.set(0, 0, 1);
      map.data.set(10, 5, 1);
     // map.data.set(0, 1, 3);
     // map.data.set(1, 1, 3);
     actor.setPos(2, 2);
     map.actors.add(actor);
-    map.actors.add(other);
-}, 400);
+
+    for (var i = 0; i < 9; i++) {
+        map.actors.add(me.AI(map, {
+            pos: {
+                x: Math.round(Math.random() * 15),
+                y: Math.round(Math.random() * 15)
+            },
+            tileIndex: 1360
+        }));        
+    }
+
+    dungen.generate();
+});
+
+tileset.load('tileset.png');
 
 function enableBeam() {
     document.getElementById('msg').innerHTML = 'Choose direction by hovering adjacent tiles, fire with left mouse';
@@ -131,11 +148,18 @@ map.canvas.onmousedown = function (e) {
         return;
     }
 
+    if (actor.dir.x === 0 && actor.dir.y === 0) {
+        disableBeam();
+        map.indicators.enable(false);
+        return;
+    }
+
     var p = map.projectiles.fire({
         pos: actor.pos(),
         dir: {x: actor.dir.x, y: actor.dir.y},
-        speed: 2
-    });
+        speed: 2,
+        tileIndex: 1358
+    }, actor);
 
    p.on('Hit', function (other) {
         var op = {x: other.pos().x, y: other.pos().y};
@@ -149,6 +173,7 @@ map.canvas.onmousedown = function (e) {
 
    disableBeam();
    map.indicators.enable(false);
+   map.processTurn();
 }
 
 document.onkeydown = function (e) {
@@ -175,6 +200,9 @@ document.onkeydown = function (e) {
     } else if (e.code === 'KeyE') {
        enableBeam();
     } else if (e.code === 'KeyT') {
+        map.processTurn();
+    } else if (e.code === 'KeyQ') {
+        map.traps.add(actor);
         map.processTurn();
     }
    //    console.log(e);

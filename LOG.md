@@ -23,3 +23,16 @@ Spent a lot of time today fiddling with the drawing code. I had forgotten how te
 Got the freeze + teleport combo working properly at least - with aiming and everything. Next up is traps. But first, food!
 
 ![progreess](progressgifs/02.transport.test.gif)
+
+# Saturday, 02:45
+
+Oh boy. It's been a pretty long session. Did the traps in probably 10 minutes,have been doing the dungeon generator since. Probably spent 7-8 hours on it. It's far from perfect (and the code is pretty ugly), but it works well enough for now. Need to tweak it later. Went for a BSP-style algorithm. 
+
+Turns out my drawing code is slow as hell too, need to implement culling, and some minor optimizations tomorrow. Also need to pre-calculate the tileset scaling - scaling on each draw call is super expensive.
+
+Also experimented with a new tileset based on the DawnLike set. Mainly because I need a bunch of props. After looking at the empty generated maps, I started thinking about placing some props here and there. Pots, chairs, tables - that sort of thing. They may be a cool gameplay element too, I'm planning on making it possible to dot the switcharoo with them. 
+
+But now, sleep. Again.
+
+![progress](progressgifs/04.map.test.new.tiles.png)
+

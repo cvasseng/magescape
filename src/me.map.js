@@ -30,10 +30,17 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 me.Map = function (attributes, tileset) {
   var properties = me.merge({
-        tileSize: 8,
-        drawSize: 64,
-        width: 100,
-        height: 100
+        tileSize: 16,
+        drawSize: 8,
+        width: 70,
+        height: 70,
+        wallTile: 27,
+        viewBox: {
+          x: 0,
+          y: 0,
+          w: 1000,
+          h: 1000
+        }
       }, attributes),
       events = me.Events(),
       data = [],      
@@ -43,6 +50,7 @@ me.Map = function (attributes, tileset) {
       spriteLayer = document.createElement('canvas'),
       projectileLayer = document.createElement('canvas'),
       indicatorLayer = document.createElement('canvas'),
+      trapLayer = document.createElement('canvas'),
 
       enableIndicators = false,
 
@@ -51,6 +59,7 @@ me.Map = function (attributes, tileset) {
       pctx = projectileLayer.getContext('2d'),
       actors = [],
       projectiles = [],
+      traps = [],
       exports = {}
   ;
 
@@ -104,8 +113,12 @@ me.Map = function (attributes, tileset) {
 
   function redrawActors() {
     sctx.clearRect(0, 0, spriteLayer.width, spriteLayer.height);
-    actors.forEach(function (actor) {
-      blitThing(actor, spriteLayer);
+    actors = actors.filter(function (actor) {
+      if (actor.isAlive()) {
+        blitThing(actor, spriteLayer);
+        return true;
+      }
+      return false;
     });
   }
 
@@ -140,6 +153,16 @@ me.Map = function (attributes, tileset) {
       0,
       canvas.width,
       canvas.height
+
+      // properties.viewBox.x,
+      // properties.viewBox.y,
+      // properties.viewBox.w,
+      // properties.viewBox.h,
+
+      // properties.viewBox.x,
+      // properties.viewBox.y,
+      // properties.viewBox.w,
+      // properties.viewBox.h
     );
   }
 
@@ -150,8 +173,11 @@ me.Map = function (attributes, tileset) {
     if (enableIndicators) {
       cpyBox(indicatorLayer);      
     }
+    cpyBox(trapLayer);
     cpyBox(spriteLayer);
-    cpyBox(projectileLayer);
+    if (projectiles.length > 0) {
+      cpyBox(projectileLayer);
+    }
   }
 
   //End drawing functions
@@ -188,6 +214,14 @@ me.Map = function (attributes, tileset) {
       x = x.x;
     }
 
+    // if (x < properties.viewBox.x || 
+    //     x > properties.viewBox.x + properties.viewBox.w ||
+    //     y < properties.viewBox.y ||
+    //     y > properties.viewBox.y + properties.viewBox.h
+    // ) {
+    //   return;
+    // }
+
     //Blit to the background layer
     convert(x, y, function (index) {
       if (tileset) {
@@ -206,23 +240,30 @@ me.Map = function (attributes, tileset) {
     //Blit background to the main layer
     cpyTile(x, y, backgroundLayer);
 
+
     if (enableIndicators) {
       //Blit the indicator layer
       cpyTile(x, y, indicatorLayer);      
     }
 
+    //Blit trap layer
+    cpyTile(x, y, trapLayer);
+
     //Blit the sprite layer
     cpyTile(x, y, spriteLayer);
 
-    //Blit the projectile layer
-    cpyTile(x, y, projectileLayer);
+    if (projectiles.length > 0) {
+      //Blit the projectile layer
+      cpyTile(x, y, projectileLayer);      
+    }
 
   }
 
   //Check for collision
   function collision(x, y) {
+    //return false;
     return !convert(x, y, function (index) {
-      return data[index] === 0;
+      return data[index] != properties.wallTile;
     });
   }
 
@@ -244,36 +285,38 @@ me.Map = function (attributes, tileset) {
     function redrawActor() {
       var ft = actor.frozen();
 
-      redrawActors();
+      //redrawActors();
       
-      if (ft > 0) {        
-        sctx.fillStyle = '#FFF';
-        sctx.strokeStyle = '#FFF';
-        sctx.font = "14px 'Patrick Hand', serif";
+      // if (actor.isAlive() && ft > 0) {        
+      //   sctx.fillStyle = '#FFF';
+      //   sctx.strokeStyle = '#FFF';
+      //   sctx.font = "14px 'Patrick Hand', serif";
 
-        sctx.fillText (
-          'Frozen ' + ft, 
-          (actor.pos().x * properties.drawSize) + (properties.drawSize - (properties.drawSize / 2)), 
-          (actor.pos().y * properties.drawSize) - 12
-        );
-      }
+      //   sctx.fillText (
+      //     'Frozen ' + ft, 
+      //     (actor.pos().x * properties.drawSize) + (properties.drawSize - (properties.drawSize / 2)), 
+      //     (actor.pos().y * properties.drawSize) - 12
+      //   );
+      // }
 
       //Draw the actor
       //clear(actor.opos(), spriteLayer);
-      // blitThing(actor, spriteLayer);
+      //blitThing(actor, spriteLayer);
 
-      //redraw(actor.opos());
-      //redraw(actor.pos());
+      // redraw(actor.opos());
+      // redraw(actor.pos());
     
-      assemble();
+     // assemble();
     }
 
     actor.on('Move', redrawActor);
     actor.on('Frozen', redrawActor);
     
     actor.on('Kill', function () {
-      clear(actor.pos(), spriteLayer);
-      redraw(actor.pos());
+      //clear(actor.pos(), spriteLayer);
+      redrawActors();
+      //redraw(actor.pos());
+      assemble();
     });
 
     actors.push(actor);
@@ -308,32 +351,81 @@ me.Map = function (attributes, tileset) {
     return p;
   }
 
-  function processTurn() {
-    //Update projectiles
-    projectiles = projectiles.filter(function (p) {
-      //redraw(p.opos());
-      if (p.processTurn()) {
-        return true;        
-      }
-      return false;
+  function addTrap(owner, attributes) {
+    var t = me.Trap(me.merge({
+              pos: {
+                x: owner.pos().x,
+                y: owner.pos().y
+              }
+            }, attributes), 
+            exports, 
+            owner
+        );
+
+    function drawTrap() {
+      var tctx = trapLayer.getContext('2d');
+
+      clear(t.properties.pos, trapLayer);
+      blitThing(t, trapLayer);
+
+      tctx.fillStyle = '#FFF';
+      tctx.strokeStyle = '#FFF';
+      tctx.font = "14px 'Patrick Hand', serif";
+
+      tctx.fillText (
+        t.properties.duration, 
+        (t.pos().x * properties.drawSize) + (properties.drawSize - (properties.drawSize / 2)), 
+        (t.pos().y * properties.drawSize) + (properties.drawSize - 12)
+      );
+
+      redraw(t.properties.pos.x, t.properties.pos.y);
+    }
+
+    t.on('Turn', drawTrap);
+
+    t.on('Kill', function () {
+      clear(t.properties.pos, trapLayer);
+      redraw(t.properties.pos.x, t.properties.pos.y);
     });
 
+    drawTrap();
+
+    traps.push(t);
+  }
+
+  function processTurn() {
+    var start = (new Date()).getTime();
+    //Update projectiles
+    projectiles = projectiles.filter(function (p) {
+      return p.processTurn();
+    });
+    
     actors.forEach(function (actor) {
       actor.processTurn();
     });
-  }
 
-  
+    redrawActors();
+    assemble();
+
+
+    traps = traps.filter(function (t) {
+      return t.processTurn();
+    });
+
+    console.log('Turn time:', ((new Date()).getTime() - start) / 1000 + 's');
+
+  }
 
   /////////////////////////////////////////////////////////////////////////////
 
   //Init everything
-  projectileLayer.width = backgroundLayer.width = indicatorLayer.width = spriteLayer.width = canvas.width = properties.width * properties.drawSize;
-  projectileLayer.height = backgroundLayer.height = indicatorLayer.height = spriteLayer.height = canvas.height = properties.height * properties.drawSize;
+  trapLayer.width = projectileLayer.width = backgroundLayer.width = indicatorLayer.width = spriteLayer.width = canvas.width = properties.width * properties.drawSize;
+  trapLayer.height = projectileLayer.height = backgroundLayer.height = indicatorLayer.height = spriteLayer.height = canvas.height = properties.height * properties.drawSize;
 
   backgroundLayer.getContext('2d').imageSmoothingEnabled = false;
   projectileLayer.getContext('2d').imageSmoothingEnabled = false;
   spriteLayer.getContext('2d').imageSmoothingEnabled = false;
+  trapLayer.getContext('2d').imageSmoothingEnabled = false;
   ctx.imageSmoothingEnabled = false;
 
   for (var i = 0; i < properties.width * properties.height; i++) {
@@ -362,6 +454,9 @@ me.Map = function (attributes, tileset) {
     },
     projectiles: {
       fire: fireProjectile
+    },
+    traps: {
+      add: addTrap
     },
     tileset: function () { return tileset; }
   };

@@ -28,67 +28,78 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 */
 
-me.Actor = function (map, attributes) {
-  var properties = me.merge({
-        tileIndex: 90,
-        pos: {x: 0, y: 0}
-      }, attributes),
-      pos = properties.pos,
-      opos = {x: 0, y: 0},
-      dir = {x: 0, y: 0},
-      alive = true,
-      events = me.Events(),
-      exports = {},
-      skills = {},
-      frozenTurns = 0
-  ;
+(function () {
+  var gid = 0;
 
-  /////////////////////////////////////////////////////////////////////////////
-
-  function move(nx, ny) {
-    var a = map.actors.collision(Math.floor(nx), Math.floor(ny));
-
-    if (a) {
-      events.emit('Bump', exports);
-      return;
-    }
-
-
-    if (!map.data.collision(Math.floor(nx), Math.floor(ny))) {             
-      setPos(nx, ny);
-    }
-  }
-
-  //Move to the left
-  function moveLeft() {    
-    move(pos.x - 1, pos.y);
-  }
-
-  //Move to the right
-  function moveRight() {
-    move(pos.x + 1, pos.y);
-  }
-
-  //Move up
-  function moveUp() {
-    move(pos.x, pos.y - 1);
-  }
-
-  //Move down
-  function moveDown() {
-    move(pos.x, pos.y + 1);
-  }
-
-  //Set position
-  function setPos(nx, ny) {
-    var int = 0,
-        t = (new Date()).getTime(),
-        d = 500,
-        ox = pos.x,
-        oy = pos.y
+  me.Actor = function (map, attributes) {
+    var properties = me.merge({
+          tileIndex: 90,
+          pos: {
+            x: 0, 
+            y: 0
+          },
+          id: ++gid
+        }, attributes),
+        pos = {
+          x: properties.pos.x, 
+          y: properties.pos.y
+        },
+        opos = {
+          x: pos.x, 
+          y: pos.y
+        },
+        dir = {
+          x: 0, 
+          y: 0
+        },
+        alive = true,
+        events = me.Events(),
+        exports = {},
+        skills = {},
+        frozenTurns = 0
     ;
 
-    function step(x, y) {
+    /////////////////////////////////////////////////////////////////////////////
+
+    function move(nx, ny) {
+      var a = map.actors.collision(Math.floor(nx), Math.floor(ny));
+
+      if (!alive || frozenTurns > 0) return;
+
+      if (a) {
+        events.emit('Bump', exports);
+        return;
+      }
+
+      if (!map.data.collision(Math.floor(nx), Math.floor(ny))) {             
+        setPos(nx, ny);
+      }
+    }
+
+    //Move to the left
+    function moveLeft() {    
+      move(pos.x - 1, pos.y);
+    }
+
+    //Move to the right
+    function moveRight() {
+      move(pos.x + 1, pos.y);
+    }
+
+    //Move up
+    function moveUp() {
+      move(pos.x, pos.y - 1);
+    }
+
+    //Move down
+    function moveDown() {
+      move(pos.x, pos.y + 1);
+    }
+
+    //Set position
+    function setPos(x, y) {    
+      if (!alive) return;
+   
       if (!y && x && x.y && x.x) {
         y = x.y;
         x = x.x;
@@ -103,94 +114,85 @@ me.Actor = function (map, attributes) {
       
       opos.x = pos.x;
       opos.y = pos.y;
+   
     }
 
-    step(nx, ny); 
-    // int = setInterval(function () {
-    //   var t0 = (new Date()).getTime() - t,
-    //       t1 = t0 / d
-    //   ;
-      
+    //Use a skill
+    function useSkill(name) {
+      if (typeof skills[name] !== 'undefined') {
 
-    //   console.log(t0, t1);
-
-    //   step(
-    //     me.lerp(ox, nx, t1),
-    //     me.lerp(oy, ny, t1)
-    //   );
-      
-    //   if (t0 > d) {
-    //     clearInterval(int);
-    //   }
-    // }, 10);
-
-  }
-
-  //Use a skill
-  function useSkill(name) {
-    if (typeof skills[name] !== 'undefined') {
-
-      events.emit('UseSkill', exports, skills[name]);
+        events.emit('UseSkill', exports, skills[name]);
+      }
     }
-  }
 
-  //Give a skill
-  function giveSkill() {
+    //Give a skill
+    function giveSkill() {
 
-  }
+    }
 
-  //Kill
-  function kill() {
-    alive = false;
-    events.emit('Kill', exports);
-  }
+    //Kill
+    function kill() {
+      if (!alive) return;
+      alive = false;
+      events.emit('Kill', exports);
+    }
 
-  //Get the position
-  function getPos() {
-    return pos;
-  }
+    //Get the position
+    function getPos() {
+      return pos;
+    }
 
-  //Get the old position
-  function getOPos() {
-    return opos;
-  }
+    //Get the old position
+    function getOPos() {
+      return opos;
+    }
 
-  //Freeze the actor
-  function freeze() {
-    frozenTurns = 6;
-    events.emit('Frozen', exports, frozenTurns);
-  }
-
-  function processTurn() {
-    if (frozenTurns > 0) {
-      frozenTurns--;
+    //Freeze the actor
+    function freeze() {
+      if (!alive) return;
+      frozenTurns = 6;
       events.emit('Frozen', exports, frozenTurns);
     }
-    events.emit('Turn', exports);
-  }
 
-  /////////////////////////////////////////////////////////////////////////////
+    function processTurn() {
+      if (!alive) return;
 
-  //Public interface
-  exports = {
-    properties: properties,
-    on: events.on,
-    useSkill: useSkill,
-    giveSkill: giveSkill,
-    setPos: setPos,
-    moveLeft: moveLeft,
-    moveRight: moveRight,
-    moveUp: moveUp,
-    moveDown: moveDown,
-    processTurn: processTurn,
-    isAlive: function () { return alive; },
-    frozen: function () { return frozenTurns; },
-    pos: getPos,
-    opos: getOPos,
-    kill: kill,
-    freeze: freeze,
-    dir: dir
+      if (frozenTurns > 0) {
+        frozenTurns--;      
+        if (frozenTurns === 0) {
+          events.emit('UnFrozen', exports);
+        } else {
+          //events.emit('Frozen', exports, frozenTurns);        
+        }
+        return;
+      }
+
+      events.emit('Turn', exports);
+    }
+
+    /////////////////////////////////////////////////////////////////////////////
+
+    //Public interface
+    exports = {
+      properties: properties,
+      on: events.on,
+      useSkill: useSkill,
+      giveSkill: giveSkill,
+      setPos: setPos,
+      moveLeft: moveLeft,
+      moveRight: moveRight,
+      moveUp: moveUp,
+      moveDown: moveDown,
+      processTurn: processTurn,
+      isAlive: function () { return alive; },
+      frozen: function () { return frozenTurns; },
+      pos: getPos,
+      opos: getOPos,
+      kill: kill,
+      freeze: freeze,
+      dir: dir
+    };
+
+    return exports;
   };
-
-  return exports;
-};
+})();

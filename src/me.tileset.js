@@ -29,14 +29,36 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
 me.Tileset = function (filename) {
-  var img = new Image()
+  var img = new Image(),
+      canvas = document.createElement('canvas'),
+      events = me.Events()
   ;
+
+  //It's slightly faster to blit from a canvas
+  img.onload = function () {
+    canvas.width = img.width;
+    canvas.height = img.height;
+
+    canvas.getContext('2d').drawImage(
+      img,
+      0,
+      0,
+      img.width,
+      img.height,
+      0,
+      0,
+      img.width,
+      img.height
+    );
+
+    events.emit('Load');
+  };
 
   /////////////////////////////////////////////////////////////////////////////
 
   //Blit a tile
-  function blit(canvas, index, x, y, tileSize, width, height) {
-    var ctx = canvas.getContext('2d'),
+  function blit(tcanvas, index, x, y, tileSize, width, height) {
+    var ctx = tcanvas.getContext('2d'),
         tileSizeX = tileSize || 32,
         tileSizeY = tileSize || 32,
         tw,
@@ -44,24 +66,23 @@ me.Tileset = function (filename) {
         sx
     ;
 
-    if (img instanceof Image) {
-      tw = Math.floor(img.width / tileSizeX);
-      sy = Math.floor(index / tw);
-      sx = index - (sy * tw);  
+    tw = Math.floor(canvas.width / tileSizeX);
+    sy = Math.floor(index / tw);
+    sx = index - (sy * tw);  
 
-      sx = sx * tileSizeX;
-      sy = sy * tileSizeY;   
-      
-      if (sy < img.height && sx < img.width && sx >= 0 && sy >= 0) {
-        ctx.drawImage(  
-          img, 
-          sx, sy, tileSizeX, tileSizeY, 
-          x, y, 
-          width || tileSizeX, 
-          height || tileSizeY
-        );
-      }
+    sx = sx * tileSizeX;
+    sy = sy * tileSizeY;   
+    
+    if (sy < canvas.height && sx < canvas.width && sx >= 0 && sy >= 0) {
+      ctx.drawImage(  
+        canvas, 
+        sx, sy, tileSizeX, tileSizeY, 
+        x, y, 
+        width || tileSizeX, 
+        height || tileSizeY
+      );
     }
+    
   }
 
   //Load tileset
@@ -76,6 +97,7 @@ me.Tileset = function (filename) {
   }
 
   return {
+    on: events.on,
     blit: blit,
     load: load
   }

@@ -28,74 +28,40 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 */
 
-me.Projectile = function (attrs, map, originator) {
+me.Trap = function (attributes, map, owner) {
   var properties = me.merge({
-        dir: {
-          x: 0, 
-          y: 0
-        },
         pos: {x: 0, y: 0},
-        speed: 2,
-        range: 3,
-        tileIndex: 29
-      }, attrs),
-      pos = {
-        x: properties.pos.x,// + properties.dir.x,
-        y: properties.pos.y// + properties.dir.y
-      },
-      opos = {
-        x: pos.x, 
-        y: pos.y
-      },
+        tileIndex: 1353,
+        size: 1,
+        duration: 4
+      }, attributes),
       events = me.Events()
   ;
 
-  /////////////////////////////////////////////////////////////////////////////
-
-  //Process the projectile - return false if inactive
   function processTurn() {
-    var nx, ny, ac, s;
-
-    s = properties.speed;
-
-    while (s > 0) {      
-      nx = pos.x + properties.dir.x;
-      ny = pos.y + properties.dir.y;
-      ac = map.actors.collision(nx, ny);
-      
-
-      if (ac !== false && ac.properties.id !== originator.properties.id) {        
-        events.emit('Hit', ac);      
-        events.emit('Kill', ac); 
-        return false;
-      }
-
-      if (map.data.collision(nx, ny)) {
-        events.emit('Kill', ac); 
-        return false;
-      }
-
-      pos.x = nx;
-      pos.y = ny;
-      
-      events.emit('Step');
-
-      opos.x = pos.x;
-      opos.y = pos.y;
-      
-      s--;
+    var a = map.actors.collision(properties.pos.x, properties.pos.y);
+    properties.duration--;
+    if (properties.duration <= 0) {
+      events.emit('Kill');
+      return false;
     }
+
+    events.emit('Turn');
+
+    if (a !== false && a !== owner) {
+      a.kill();
+      events.emit('Kill');
+      return;
+    }
+
 
     return true;
   }
 
-  /////////////////////////////////////////////////////////////////////////////
-  
   return {
     on: events.on,
-    processTurn: processTurn,
     properties: properties,
-    pos: function() { return pos; },
-    opos: function () { return opos; }
+    processTurn: processTurn,
+    pos: function() { return properties.pos; }
   }
 };

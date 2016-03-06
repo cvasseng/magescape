@@ -1,0 +1,264 @@
+/*
+
+Magescape - 7DRL contribution, 2016
+
+Copyright (c) 2016, Chris V - chris@tinkerer.xyz
+All rights reserved.
+
+Redistribution and use in source and binary forms, with or without
+modification, are permitted provided that the following conditions are met:
+
+* Redistributions of source code must retain the above copyright notice, this
+  list of conditions and the following disclaimer.
+
+* Redistributions in binary form must reproduce the above copyright notice,
+  this list of conditions and the following disclaimer in the documentation
+  and/or other materials provided with the distribution.
+
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
+FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+*/
+
+//Simple BSP-style generator
+me.DungeonGen = function (map) {
+  var floorTile = 135,
+      wallTile = 27
+  ;
+
+  function Node (px, py, width, height, parent, splitType) {
+    var children = [], 
+        exports = {},
+        roomWidth = width,
+        roomHeight = height
+    ;
+
+    function random(min, max) {
+      return Math.floor(Math.random() * (max - min + 1) + min)
+    }
+
+    function subdivide() {
+      var dir = Math.round(Math.random()),
+          x = Math.round(Math.random() * (width / 2)),
+          y = Math.round(Math.random() * (height / 2))              
+      ;
+
+      if (x < 10) x = 10;
+      if (y < 10) y = 10;
+
+      if (height < 35 && width < 35) {
+        dir = 2;
+      } else if (height < 30) {
+        dir = 0;
+      } else if (width < 30) {
+        dir = 1;
+      } 
+
+      if (dir === 0) {
+        //Split vertically
+        children.push(Node(px, py, x, height, exports, dir).subdivide());
+        children.push(Node(px + x, py, width - x, height, exports, dir).subdivide());
+      
+      } else if (dir === 1) {
+        //Split horizontally
+        children.push(Node(px, py, width, y, exports, dir).subdivide());
+        children.push(Node(px, py + y, width, height - y, exports, dir).subdivide());
+      }
+      
+      return exports;
+    }
+
+    function getRoomFromChildren() {
+      var left, right;
+
+      if (children.length === 2) {
+        left = children[0].getRoomFromChildren();
+        right = children[1].getRoomFromChildren();        
+        return Math.random() > 0.5 ? left : right;
+      } 
+
+      return exports;      
+    }
+
+    function connectChildren(left, right) {
+      var d, i, j, x, y, fc, lc, t, tl, fx, fy, tx, ty, hx, hy;
+
+      if ((!left || !right) && children.length === 0) {
+        return;
+      }
+
+      fc = left ? left : children[0].getRoomFromChildren();
+      lc = right ? right : children[1].getRoomFromChildren();
+
+     // if (fc.px < lc.px) {
+        fx = Math.round(fc.px + (fc.roomWidth() / 2));
+        tx = Math.round(lc.px + (lc.roomWidth() / 2));        
+      // } else {
+      //   fx = Math.round(lc.px + (lc.roomWidth() / 2));
+      //   tx = Math.round(fc.px + (fc.roomWidth() / 2)); 
+      // }
+
+      // if (fc.py < lc.py) {
+        fy = fc.py + Math.round(fc.roomHeight() / 2);      
+        ty = lc.py + Math.round(lc.roomHeight() / 2);        
+      // } else {
+      //   fy = lc.py + Math.round(lc.roomHeight() / 2);      
+      //   ty = fc.py + Math.round(fc.roomHeight() / 2);        
+      // }
+
+      // console.log('drew line', fx, fy, tx, ty);
+
+      // var c = map.canvas.getContext('2d');
+      // c.strokeStyle = '#AA3333';
+      // c.beginPath();
+      // c.moveTo(fx * map.properties.drawSize, fy * map.properties.drawSize);
+      // c.lineTo(tx * map.properties.drawSize, ty * map.properties.drawSize);
+      // c.closePath();
+      // c.stroke();
+
+      hx = Math.floor((tx - fx) / 2);
+
+      //Go right first, until we're halfway there
+      for (var i = -1; i <= hx + 3; i++) {
+        map.data.set(fx + i, fy , 5);
+      }
+
+      //Now go the rest of the way at ty
+      for (var i = 0; i <= hx + 1; i++) {
+        map.data.set(fx + hx + i, ty , 5);
+      }
+
+      //Now go from the halfway X and up to ty
+      for (var i = 0; i <= ty - fy; i++) {
+        if (map.data.get(fx + hx, fy + i) !== 5) {
+          map.data.set(fx + hx, fy + i, 6);          
+        }
+      }
+    }
+
+    function generate() {
+      if (children.length == 2) {
+        children.forEach(function (child) {
+          child.generate();
+        });
+        connectChildren();
+      } else {        
+        console.log('Final room size', width, height);
+        roomWidth = width - (Math.round(Math.random() * (width / 2))) - 2;
+        roomHeight = height - (Math.round(Math.random() * (height / 2))) - 2;
+
+        //Top + bottom
+        for (var i = 0; i <= roomWidth; i++){
+          map.data.set(px + i, py, wallTile);
+          map.data.set(px + i, py + roomHeight, wallTile);
+        }
+
+        //Left + right 
+        for (var i = 0; i <= roomHeight; i++){
+          map.data.set(px, py + i, wallTile);
+          map.data.set(px + roomWidth, py + i, wallTile);
+        }
+
+        if (parent.children[1] === exports) {
+          connectChildren(parent.children[0], parent.children[1]);          
+        }
+
+      }
+    }
+
+    function fillRoom(t) {
+      if (children.length === 0) {
+        for (var y = 1; y < roomHeight ; y++) {
+          for (var x = 1; x < roomWidth ; x++) {
+            map.data.set(px + x, py + y, typeof t === 'undefined' ? 10 : t);
+          }
+        }
+      }
+    }
+
+    function fillRooms(t) {
+      children.forEach(function (child) {
+        child.fillRooms(t);
+      });
+      fillRoom(t);
+    }
+
+    function createWalls() {
+      for (var y = 0; y < map.properties.width; y++) {
+        for (var x = 0; x < map.properties.height; x++) {
+          var t = map.data.get(x, y);
+
+          if (t === 5 || t === 6) {
+            //Fill up and down if they're 0
+            if (map.data.get(x, y + 1) === 0) {
+              map.data.set(x, y + 1, wallTile);
+            }
+
+            if (map.data.get(x, y - 1) === 0) {
+              map.data.set(x, y - 1, wallTile);
+            }
+
+            if (map.data.get(x + 1, y) === 0) {
+              map.data.set(x + 1, y, wallTile);
+            }
+
+            if (map.data.get(x - 1, y) === 0) {
+              map.data.set(x - 1, y, wallTile);
+            }
+          } 
+        }
+      }
+
+      //And again..
+      for (var y = 0; y < map.properties.width; y++) {
+        for (var x = 0; x < map.properties.height; x++) {
+          var t = map.data.get(x, y);
+
+          if (t === 5 || t === 6) {
+            map.data.set(x, y, floorTile);
+          } 
+        }
+      }
+
+      fillRooms(floorTile);
+    }
+
+    exports = {
+      createWalls: createWalls,
+      splitType: splitType,
+      px: px,
+      py: py,
+      fillRooms: fillRooms,
+      children: children,      
+      generate: generate,
+      subdivide: subdivide,
+      getRoomFromChildren: getRoomFromChildren,
+      roomWidth: function () { return roomWidth; },
+      roomHeight: function() { return roomHeight; }
+    };
+
+    return exports;
+  }
+
+
+  function generate() {
+    var n = Node(0, 0, map.properties.width, map.properties.height).subdivide();
+
+    n.generate(); 
+    n.fillRooms();
+    n.createWalls();
+  }
+
+  return {
+    generate: generate
+  }
+
+};
