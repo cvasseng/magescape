@@ -51,4 +51,4 @@ A quick update this time - added fake lighting, blood splatter, and "center on p
 
 Getting ready to add some mobs that actually attacks to make it playable.
 
-![progress](06.fake.lighting.png)
+![progress](progressgifs/06.fake.lighting.png)
