@@ -53,7 +53,7 @@ Getting ready to add some mobs that actually attacks to make it playable.
 
 ![progress](progressgifs/06.fake.lighting.png)
 
-# Saturday, 22:30
+# Sunday, 22:30
 
 Just implemented basic AI behavior. They acts stupid, to say the least, but it's working. The game isn't exactly super fun at this point, will need to figure out how to deal with that. It's possible that more sensible AI and enemy placement + some obstacles in the room will suffice. I also have some ideas for having the AI engage in dialog. And there's always ye olde hunger clock and items to increase the depth a bit.
 
