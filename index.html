@@ -56,7 +56,7 @@ var tileset = me.Tileset(),
             x: 1,
             y: 1
         },
-        tileIndex: 657
+        tileIndex: 155
     }),
 
     doBeam = false,
@@ -79,14 +79,14 @@ tileset.on('Load', function () {
                 x: Math.round(Math.random() * 15),
                 y: Math.round(Math.random() * 15)
             },
-            tileIndex: 1360
+            tileIndex: 156
         }));        
     }
 
     dungen.generate();
 });
 
-tileset.load('tileset.png');
+tileset.load('dungeon.png');
 
 function enableBeam() {
     document.getElementById('msg').innerHTML = 'Choose direction by hovering adjacent tiles, fire with left mouse';
@@ -158,7 +158,7 @@ map.canvas.onmousedown = function (e) {
         pos: actor.pos(),
         dir: {x: actor.dir.x, y: actor.dir.y},
         speed: 2,
-        tileIndex: 1358
+        tileIndex: 121
     }, actor);
 
    p.on('Hit', function (other) {

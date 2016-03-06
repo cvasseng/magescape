@@ -30,11 +30,12 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 me.Map = function (attributes, tileset) {
   var properties = me.merge({
-        tileSize: 16,
-        drawSize: 8,
-        width: 70,
-        height: 70,
+        tileSize: 24,
+        drawSize: 64,
+        width: 50,
+        height: 50,
         wallTile: 27,
+        enableDrawing: false,
         viewBox: {
           x: 0,
           y: 0,
@@ -168,6 +169,10 @@ me.Map = function (attributes, tileset) {
 
   //Assemble the layers
   function assemble() {
+    if (!properties.enableDrawing) {
+      return;
+    }
+
     ctx.clearRect(0, 0, indicatorLayer.width, indicatorLayer.height);
     cpyBox(backgroundLayer);
     if (enableIndicators) {
@@ -203,15 +208,54 @@ me.Map = function (attributes, tileset) {
   function setTile(x, y, value) {
     convert(x, y, function (index) {
       data[index] = value;
+      
       redraw(x, y);
+
+      if (tileset.isNSensitive(value)) {
+        //Update adjacent
+        redraw(x - 1, y);
+        redraw(x + 1, y);
+        redraw(x, y - 1);
+        redraw(x, y + 1);
+      }
     });
   }
 
+  function calcTileIndex(r, above, left, below, right) {
+    var sum = 0;
+    
+    if (above === r) {
+      sum += 1;
+    } 
+    
+    if (left === r) {
+      sum += 2;
+    }
+    
+    if (below === r) {
+      sum += 4;
+    }
+
+    if (right === r) {
+      sum += 8;
+    }
+
+    return tileset.getTile(r, sum);
+  };
+
   //Redraw a single tile
   function redraw(x, y) {
+    if (!properties.enableDrawing) {
+      return;
+    }
+
     if (!y && x && x.x && x.y) {
       y = x.y;
       x = x.x;
+    }
+
+    if (x < 0 || x >= properties.width || y < 0 || y >= properties.height) {
+      return;
     }
 
     // if (x < properties.viewBox.x || 
@@ -224,10 +268,25 @@ me.Map = function (attributes, tileset) {
 
     //Blit to the background layer
     convert(x, y, function (index) {
+      var i = data[index],
+          t
+      ;
+
+      if (tileset.isNSensitive(i)) {
+        t = calcTileIndex(i, 
+          data[x + (y - 1) * properties.width],
+          data[(x - 1) + y * properties.width],
+          data[x + (y + 1) * properties.width],
+          data[(x + 1) + y * properties.width]
+        );
+      } else {
+        t = tileset.getTile(i);
+      }
+
       if (tileset) {
         tileset.blit(
           backgroundLayer, 
-          data[index], 
+          t, 
           x * properties.drawSize, 
           y * properties.drawSize, 
           properties.tileSize, 
@@ -263,7 +322,7 @@ me.Map = function (attributes, tileset) {
   function collision(x, y) {
     //return false;
     return !convert(x, y, function (index) {
-      return data[index] != properties.wallTile;
+      return !tileset.isWall(data[index]);
     });
   }
 

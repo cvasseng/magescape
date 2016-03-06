@@ -48,11 +48,11 @@ me.AI = function (map, attributes) {
   });
 
   actor.on('Frozen', function () {
-    actor.properties.tileIndex = 1361;
+    actor.properties.tileIndex = 179;
   });
 
   actor.on('UnFrozen', function () {
-    actor.properties.tileIndex = 1360;
+    actor.properties.tileIndex = 156;
   });
 
   return actor;

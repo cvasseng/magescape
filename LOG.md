@@ -36,3 +36,11 @@ But now, sleep. Again.
 
 ![progress](progressgifs/04.map.test.new.tiles.png)
 
+# Saturday, 15:30
+
+It's been a productive early afternoon so far. Squeezed out a couple of hours, and managed to get a neighbor sensitive tile system up and running, sped up the dungeon generator by a magnitude, tweaked its output, and switched out the tileset again. I think this is the set I'll stick with, it looks pretty good.
+
+Next up is a line-of-sight type thing. I'm thinking a fog of war type thing.
+I think I'll just fill in the area outside of rooms/corridors as "not viewable", and the rest as "discoverable" during the generation. Then I'll do a limited flood fill based on the player position when it changes, to change "discoverable" to "viewable". Or something like that. 
+
+![progress](progressgifs/05.tiletransitions.png)

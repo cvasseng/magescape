@@ -31,7 +31,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 me.Trap = function (attributes, map, owner) {
   var properties = me.merge({
         pos: {x: 0, y: 0},
-        tileIndex: 1353,
+        tileIndex: 120,
         size: 1,
         duration: 4
       }, attributes),

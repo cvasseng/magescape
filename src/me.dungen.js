@@ -30,8 +30,9 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 //Simple BSP-style generator
 me.DungeonGen = function (map) {
-  var floorTile = 135,
-      wallTile = 27
+  var floorTile = 0,
+      wallTile = 1,
+      wallShadowTile = 2
   ;
 
   function Node (px, py, width, height, parent, splitType) {
@@ -116,24 +117,20 @@ me.DungeonGen = function (map) {
 
       // console.log('drew line', fx, fy, tx, ty);
 
-      // var c = map.canvas.getContext('2d');
-      // c.strokeStyle = '#AA3333';
-      // c.beginPath();
-      // c.moveTo(fx * map.properties.drawSize, fy * map.properties.drawSize);
-      // c.lineTo(tx * map.properties.drawSize, ty * map.properties.drawSize);
-      // c.closePath();
-      // c.stroke();
+  
 
       hx = Math.floor((tx - fx) / 2);
 
       //Go right first, until we're halfway there
-      for (var i = -1; i <= hx + 3; i++) {
+      for (var i = -1; i <= hx + 1; i++) {
         map.data.set(fx + i, fy , 5);
+        map.data.set(fx + i, fy + 1, 5);
       }
 
       //Now go the rest of the way at ty
       for (var i = 0; i <= hx + 1; i++) {
         map.data.set(fx + hx + i, ty , 5);
+        map.data.set(fx + hx + i, ty + 1, 5);
       }
 
       //Now go from the halfway X and up to ty
@@ -142,6 +139,14 @@ me.DungeonGen = function (map) {
           map.data.set(fx + hx, fy + i, 6);          
         }
       }
+
+      //     var c = map.canvas.getContext('2d');
+      // c.strokeStyle = '#AA3333';
+      // c.beginPath();
+      // c.moveTo(fx * map.properties.drawSize, fy * map.properties.drawSize);
+      // c.lineTo(tx * map.properties.drawSize, ty * map.properties.drawSize);
+      // c.closePath();
+      // c.stroke();
     }
 
     function generate() {
@@ -157,8 +162,10 @@ me.DungeonGen = function (map) {
 
         //Top + bottom
         for (var i = 0; i <= roomWidth; i++){
-          map.data.set(px + i, py, wallTile);
+          map.data.set(px + i, py - 1, wallTile);
+          map.data.set(px + i, py, 2);
           map.data.set(px + i, py + roomHeight, wallTile);
+          map.data.set(px + i, py + roomHeight + 1, 2);
         }
 
         //Left + right 
@@ -178,7 +185,7 @@ me.DungeonGen = function (map) {
       if (children.length === 0) {
         for (var y = 1; y < roomHeight ; y++) {
           for (var x = 1; x < roomWidth ; x++) {
-            map.data.set(px + x, py + y, typeof t === 'undefined' ? 10 : t);
+            map.data.set(px + x, py + y, t ? floorTile : 10);
           }
         }
       }
@@ -191,26 +198,44 @@ me.DungeonGen = function (map) {
       fillRoom(t);
     }
 
+    function isWall(index) {
+      return index != 3 && index != 5 && index != 6;
+
+      // var res = false;
+      // wallTile.some(function (w) {
+      //   if (index === w) {
+      //     res = true;
+      //     return true;
+      //   }
+      // });
+
+      // return res;
+    }
+
     function createWalls() {
+      var t;
+
       for (var y = 0; y < map.properties.width; y++) {
         for (var x = 0; x < map.properties.height; x++) {
           var t = map.data.get(x, y);
 
           if (t === 5 || t === 6) {
             //Fill up and down if they're 0
-            if (map.data.get(x, y + 1) === 0) {
+            if (isWall(map.data.get(x, y + 1))) {
               map.data.set(x, y + 1, wallTile);
+             // map.data.set(x, y + 2, 2);
             }
 
-            if (map.data.get(x, y - 1) === 0) {
+            if (isWall(map.data.get(x, y - 1))) {
               map.data.set(x, y - 1, wallTile);
+              //map.data.set(x, y - 1, 2);
             }
 
-            if (map.data.get(x + 1, y) === 0) {
+            if (isWall(map.data.get(x + 1, y))) {
               map.data.set(x + 1, y, wallTile);
             }
 
-            if (map.data.get(x - 1, y) === 0) {
+            if (isWall(map.data.get(x - 1, y))) {
               map.data.set(x - 1, y, wallTile);
             }
           } 
@@ -228,10 +253,31 @@ me.DungeonGen = function (map) {
         }
       }
 
-      fillRooms(floorTile);
+      fillRooms(true);
+
+      map.properties.enableDrawing = true;
+
+      for (var y = 0; y < map.properties.width; y++) {
+        for (var x = 0; x < map.properties.height; x++) {
+          t = map.data.get(x, y);
+
+          //If there is shadow 
+
+          map.data.set(x, y, t);
+          //If this is a wall, and there's ground below, add shadow
+          if (t === 1 && map.data.get(x, y + 1) === 0) {
+            map.data.set(x, y + 1, 2);
+          }
+        }
+      }
+    }
+
+    function decorate(allowed) {
+
     }
 
     exports = {
+      decorate: decorate,
       createWalls: createWalls,
       splitType: splitType,
       px: px,
@@ -250,7 +296,10 @@ me.DungeonGen = function (map) {
 
 
   function generate() {
-    var n = Node(0, 0, map.properties.width, map.properties.height).subdivide();
+    var n = Node(1, 1, map.properties.width, map.properties.height).subdivide();
+
+    map.properties.enableDrawing = false;
+
 
     n.generate(); 
     n.fillRooms();
