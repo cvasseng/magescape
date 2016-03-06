@@ -29,10 +29,12 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
 //Simple BSP-style generator
-me.DungeonGen = function (map) {
+me.DungeonGen = function (map, level) {
   var floorTile = 0,
       wallTile = 1,
-      wallShadowTile = 2
+      wallShadowTile = 2,
+      placeHolderA = 100,
+      placeHolderB = 101
   ;
 
   function Node (px, py, width, height, parent, splitType) {
@@ -43,6 +45,9 @@ me.DungeonGen = function (map) {
     ;
 
     function random(min, max) {
+      if (max < min) {
+        return min;
+      }
       return Math.floor(Math.random() * (max - min + 1) + min)
     }
 
@@ -123,20 +128,20 @@ me.DungeonGen = function (map) {
 
       //Go right first, until we're halfway there
       for (var i = -1; i <= hx + 2; i++) {
-        map.data.set(fx + i, fy , 5);
-        map.data.set(fx + i, fy + 1, 5);
+        map.data.set(fx + i, fy , placeHolderA);
+        map.data.set(fx + i, fy + 1, placeHolderA);
       }
 
       //Now go the rest of the way at ty
       for (var i = 0; i <= hx + 1; i++) {
-        map.data.set(fx + hx + i, ty , 5);
-        map.data.set(fx + hx + i, ty + 1, 5);
+        map.data.set(fx + hx + i, ty , placeHolderA);
+        map.data.set(fx + hx + i, ty + 1, placeHolderA);
       }
 
       //Now go from the halfway X and up to ty
       for (var i = 0; i <= ty - fy; i++) {
-        if (map.data.get(fx + hx, fy + i) !== 5) {
-          map.data.set(fx + hx, fy + i, 6);          
+        if (map.data.get(fx + hx, fy + i) !== placeHolderA) {
+          map.data.set(fx + hx, fy + i, placeHolderB);          
         }
       }
 
@@ -150,6 +155,8 @@ me.DungeonGen = function (map) {
     }
 
     function generate() {
+      var ra = 0, seed = 1, casters = 0, melee = 0, i;
+
       if (children.length == 2) {
         children.forEach(function (child) {
           child.generate();
@@ -178,6 +185,59 @@ me.DungeonGen = function (map) {
           connectChildren(parent.children[0], parent.children[1]);          
         }
 
+        //Calculate area of room - this will be used to figure out how many enemies to place
+        ra = roomWidth * roomHeight;
+
+        if (ra > 60) {
+          seed += 4;
+        } else if (ra > 50) {
+          seed += 3;
+        } else if (ra > 40) {
+          seed += 2;
+        } else if (ra > 30) {
+          seed += 2;
+        } else if (ra > 20) {
+          seed += 2;
+        } else if (ra > 10) {
+          seed += 1;
+        } else {
+          seed += 1;
+        }
+
+        casters = random(0, seed - 3);
+        melee = random(1, seed);
+
+        for (i = 0; i < casters; i++) {
+          map.actors.add(me.AI(map, {
+            pos: {
+              x: px + random(1, roomWidth - 1),
+              y: py + random(1, roomHeight - 1)
+            },
+            type: 'ranged'
+          }));
+        }
+
+        for (i = 0; i < melee; i++) {
+          map.actors.add(me.AI(map, {
+            pos: {
+              x: px + random(1, roomWidth - 1),
+              y: py + random(1, roomHeight - 1)
+            },
+            type: 'melee'
+          }));
+        }
+
+        //5% chance of spawning a real bastard
+        if (Math.random() <= 0.05) {
+          map.actors.add(me.AI(map, {
+            pos: {
+              x: px + random(1, roomWidth - 1),
+              y: py + random(1, roomHeight - 1)
+            },
+            type: 'mixed'
+          }));
+        }
+
       }
     }
 
@@ -199,7 +259,7 @@ me.DungeonGen = function (map) {
     }
 
     function isWall(index) {
-      return index != 3 && index != 5 && index != 6;
+      return index != 3 && index != placeHolderA && index != placeHolderB;
 
       // var res = false;
       // wallTile.some(function (w) {
@@ -219,7 +279,7 @@ me.DungeonGen = function (map) {
         for (var x = 0; x < map.properties.height; x++) {
           var t = map.data.get(x, y);
 
-          if (t === 5 || t === 6) {
+          if (t === placeHolderA || t === placeHolderB) {
             //Fill up and down if they're 0
             if (isWall(map.data.get(x, y + 1))) {
               map.data.set(x, y + 1, wallTile);
@@ -247,7 +307,7 @@ me.DungeonGen = function (map) {
         for (var x = 0; x < map.properties.height; x++) {
           var t = map.data.get(x, y);
 
-          if (t === 5 || t === 6) {
+          if (t === placeHolderA || t === placeHolderB) {
             map.data.set(x, y, floorTile);
           } 
         }

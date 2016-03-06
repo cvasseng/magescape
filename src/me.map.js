@@ -63,6 +63,7 @@ me.Map = function (attributes, tileset) {
       actors = [],
       projectiles = [],
       traps = [],
+      player = false,
       exports = {}
   ;
 
@@ -372,6 +373,11 @@ me.Map = function (attributes, tileset) {
     return res;
   }
 
+  function addPlayer(actor) {
+    player = actor;
+    return addActor(actor);
+  }
+
   //Add actor
   function addActor(actor) {
     function redrawActor() {
@@ -538,6 +544,7 @@ me.Map = function (attributes, tileset) {
       enable: indicatorsEnable
     },
     actors: {
+      addPlayer: addPlayer,
       add: addActor,
       collision: actorCollision
     },
@@ -553,7 +560,8 @@ me.Map = function (attributes, tileset) {
     traps: {
       add: addTrap
     },
-    tileset: function () { return tileset; }
+    tileset: function () { return tileset; },
+    player: function () { return player; }
   };
 
   return exports;

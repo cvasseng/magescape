@@ -44,7 +44,13 @@ me.Tileset = function (filename) {
         //Death effects: 3
         [58],
         //Non-visible: 4
-        [102]
+        [102],
+        //Caster type: 5
+        [156],
+        //Melee type: 6
+        [137, 138, 150, 153, 154],
+        //Mixed type: 7
+        [173, 174, 175]
 
       ]
   ;

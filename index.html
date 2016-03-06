@@ -38,6 +38,7 @@
             color:#EEE;
             text-align: center;
             font-family: 'Bad Script', sans-serif;
+            z-index:10;
         }
 
         .mask {
@@ -47,10 +48,13 @@
             height:100%;
             left:0px;
             top:0px;
-            background: radial-gradient(circle at 50% 50% , rgba(0, 0, 0, 0) 10%, rgba(0, 0, 0, 255) 100%);
+            width:100%;
+            height:100%;
+            background: radial-gradient(circle at 50% 50% , rgba(0, 0, 0, 0) 5%, rgba(0, 0, 0, 255) 70%);
         }
 
         .map {
+           
             position:fixed;
             left:0px;
             top:0px;
@@ -85,6 +89,16 @@ var tileset = me.Tileset(),
     doBeam = false,
     dungen = me.DungeonGen(map)
 ;
+
+function setMessage(msg) {
+   var e = document.getElementById('msg');
+
+   if (actor.isAlive()) {
+    e.innerHTML = msg;
+   } else {
+    e.innerHTML = '...and so ends the tale of Maginus Jellimakinus the Mage.<br/><br/>Your score: ???';    
+   }
+}
   
 document.getElementById('map').appendChild(map.canvas);
 
@@ -94,20 +108,21 @@ tileset.on('Load', function () {
     // map.data.set(0, 1, 3);
     // map.data.set(1, 1, 3);
     actor.setPos(2, 2);
-    map.actors.add(actor);
+    map.actors.addPlayer(actor);
 
-    for (var i = 0; i < 9; i++) {
-        map.actors.add(me.AI(map, {
-            pos: {
-                x: Math.round(Math.random() * 15),
-                y: Math.round(Math.random() * 15)
-            },
-            tileIndex: 156
-        }));        
-    }
+    // for (var i = 0; i < 9; i++) {
+    //     map.actors.add(me.AI(map, {
+    //         pos: {
+    //             x: Math.round(Math.random() * 15),
+    //             y: Math.round(Math.random() * 15)
+    //         }//,
+    //         //tileIndex: tileset.getTile(6)
+    //     }));        
+    // }
 
     dungen.generate();
     centerOnPlayer();
+    map.processTurn();
 });
 
 tileset.load('dungeon.png');
@@ -136,16 +151,21 @@ actor.on('Turn', centerOnPlayer);
 window.onresize = centerOnPlayer;
 
 function enableBeam() {
-    document.getElementById('msg').innerHTML = 'Choose direction by hovering adjacent tiles, fire with left mouse';
+    setMessage('Choose direction by hovering adjacent tiles, fire with left mouse');
     doBeam = true;
     actor.dir.x = 0;
     actor.dir.y = 0;
 }
 
 function disableBeam() {
-    document.getElementById('msg').innerHTML = '';
+    setMessage('');
     doBeam = false;
 }
+
+actor.on('Kill', function () {
+     setMessage('dead');
+     console.log('player killed');
+});
 
 //Testing projectile aiming
 map.canvas.onmousemove = function (e) {
@@ -228,6 +248,9 @@ map.canvas.onmousedown = function (e) {
 }
 
 document.onkeydown = function (e) {
+    if (!actor.isAlive()) {
+        return;
+    }
     if (e.code === 'KeyW') {
         actor.moveUp();
         map.processTurn();

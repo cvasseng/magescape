@@ -28,21 +28,109 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 */
 
+
 me.AI = function (map, attributes) {
-  var actor = me.Actor(map, attributes),
-      sleeping = true
+  var actor = me.Actor(map, me.merge({
+        tileIndex: map.tileset().getTile(5),
+        type: 'ranged'
+      }, attributes)),
+      sleeping = true,
+      otile = actor.properties.tileIndex
   ;
 
+  if (actor.properties.type === 'ranged') {
+    actor.properties.tileIndex = map.tileset().getTile(5);
+  } else if (actor.properties.type === 'melee') {
+    actor.properties.tileIndex = map.tileset().getTile(6);
+  } else {
+    actor.properties.tileIndex = map.tileset().getTile(7)
+  }
+
+  function fire() {
+    var p = map.projectiles.fire({
+          pos: actor.pos(),
+          dir: {
+            x: actor.dir.x,
+            y: actor.dir.y
+          },
+          speed: 1,
+          tileIndex: 121
+        }, actor)
+    ;
+    p.on('Hit', function (other) {
+      if (other === map.player()) {
+        map.player().kill();        
+      }
+    });
+  }
+
+  function dist() {
+    var xd = map.player().pos().x - actor.pos().x;
+    var yd = map.player().pos().y - actor.pos().y;
+    return Math.sqrt(xd * xd + yd * yd);
+  }
+
+  function turnTowardsPlayer() {
+    var pp = map.player().pos();
+
+    actor.dir.x = pp.x - actor.pos().x;
+    actor.dir.y = pp.y - actor.pos().y;
+
+
+    if (actor.dir.x > 1) actor.dir.x = 1;
+    if (actor.dir.x < -1) actor.dir.x = -1;
+    if (actor.dir.y > 1) actor.dir.y = 1;
+    if (actor.dir.y < -1) actor.dir.y = -1;
+
+    console.log(actor.dir);
+
+  }
+
   actor.on('Turn', function () {
+
     var mroll = Math.round(Math.random() * 100),
-        dir = Math.round(Math.random() * 4)
+        droll = Math.random(),
+        pp = map.player().pos(),
+        p = actor.pos(),
+        facingWall,
+        facingTile,
+        ranged = actor.properties.type != 'melee'
     ;
 
-    if (mroll < 30) {
-      if (dir === 0) actor.moveUp();
-      if (dir === 1) actor.moveDown();
-      if (dir === 2) actor.moveLeft();
-      if (dir === 3) actor.moveRight();
+    if (sleeping) {
+      //Check if we should wake up
+      if (dist() < 10) {
+        sleeping = false;
+      }
+      return;
+    }
+
+    if (!map.player().isAlive()) {
+      return;
+    }
+
+    //If the player is in range, wake up from slumber.
+    turnTowardsPlayer();
+    facingTile = map.data.get(p.x + actor.dir.x, p.y + actor.dir.y);
+    facingWall = facingTile == 1 || facingTile == 2;
+
+    //Move into firing position
+
+    //Ranged AI
+    if (mroll < 80) {    
+      if (actor.properties.type !== 'ranged' && dist() === 1 && mroll < 95) {
+        //console.log('Mellee killed the player');
+        map.player().kill();
+        console.log('melee killed player');
+      } else if (ranged && !facingWall && (pp.x == p.x || pp.y == p.y) && mroll < 20) {
+        fire();
+      } else if (droll < 0.5 && (actor.properties.type !== 'ranged' || pp.y != p.y)) {
+        if (pp.x > p.x) actor.moveRight();
+        else if (pp.x < p.x) actor.moveLeft();        
+      } else if (droll > 0.5 && (actor.properties.type !== 'ranged' || pp.x != p.x)) {
+        if (pp.y > p.y) actor.moveDown();
+        else if (pp.y < p.y) actor.moveUp();        
+      }
     }
 
   });
@@ -52,8 +140,9 @@ me.AI = function (map, attributes) {
   });
 
   actor.on('UnFrozen', function () {
-    actor.properties.tileIndex = 156;
+    actor.properties.tileIndex = otile;
   });
+
 
   return actor;
 };
