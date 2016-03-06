@@ -52,6 +52,8 @@ me.Map = function (attributes, tileset) {
       projectileLayer = document.createElement('canvas'),
       indicatorLayer = document.createElement('canvas'),
       trapLayer = document.createElement('canvas'),
+      bloodLayer = document.createElement('canvas'),
+      fogLayer = document.createElement('canvas'),
 
       enableIndicators = false,
 
@@ -112,11 +114,37 @@ me.Map = function (attributes, tileset) {
     }
   }
 
+  function blitRaw(pos, tile, target) {
+    if (tileset) {
+      tileset.blit(
+        target || canvas, 
+        tile, 
+        pos.x * properties.drawSize, 
+        pos.y * properties.drawSize, 
+        properties.tileSize, 
+        properties.drawSize, 
+        properties.drawSize
+      );
+    }
+  }
+
   function redrawActors() {
     sctx.clearRect(0, 0, spriteLayer.width, spriteLayer.height);
     actors = actors.filter(function (actor) {
+      var ft = actor.frozen();
       if (actor.isAlive()) {
         blitThing(actor, spriteLayer);
+        if (ft > 0) {        
+          sctx.fillStyle = '#FFF';
+          sctx.strokeStyle = '#FFF';
+          sctx.font = "14px 'Patrick Hand', serif";
+
+          sctx.fillText (
+            'Jelly ' + ft, 
+            (actor.pos().x * properties.drawSize) + (properties.drawSize - (properties.drawSize / 2)) - 15, 
+            (actor.pos().y * properties.drawSize) + 4
+          );
+        }
         return true;
       }
       return false;
@@ -178,6 +206,7 @@ me.Map = function (attributes, tileset) {
     if (enableIndicators) {
       cpyBox(indicatorLayer);      
     }
+    cpyBox(bloodLayer);
     cpyBox(trapLayer);
     cpyBox(spriteLayer);
     if (projectiles.length > 0) {
@@ -209,14 +238,14 @@ me.Map = function (attributes, tileset) {
     convert(x, y, function (index) {
       data[index] = value;
       
-      redraw(x, y);
+      redraw(x, y, true);
 
       if (tileset.isNSensitive(value)) {
         //Update adjacent
-        redraw(x - 1, y);
-        redraw(x + 1, y);
-        redraw(x, y - 1);
-        redraw(x, y + 1);
+        redraw(x - 1, y, true);
+        redraw(x + 1, y, true);
+        redraw(x, y - 1, true);
+        redraw(x, y + 1, true);
       }
     });
   }
@@ -244,7 +273,7 @@ me.Map = function (attributes, tileset) {
   };
 
   //Redraw a single tile
-  function redraw(x, y) {
+  function redraw(x, y, includeBgUpdate) {
     if (!properties.enableDrawing) {
       return;
     }
@@ -267,37 +296,41 @@ me.Map = function (attributes, tileset) {
     // }
 
     //Blit to the background layer
-    convert(x, y, function (index) {
-      var i = data[index],
-          t
-      ;
+    if (includeBgUpdate) {      
+      convert(x, y, function (index) {
+        var i = data[index],
+            t
+        ;
 
-      if (tileset.isNSensitive(i)) {
-        t = calcTileIndex(i, 
-          data[x + (y - 1) * properties.width],
-          data[(x - 1) + y * properties.width],
-          data[x + (y + 1) * properties.width],
-          data[(x + 1) + y * properties.width]
-        );
-      } else {
-        t = tileset.getTile(i);
-      }
+        if (tileset.isNSensitive(i)) {
+          t = calcTileIndex(i, 
+            data[x + (y - 1) * properties.width],
+            data[(x - 1) + y * properties.width],
+            data[x + (y + 1) * properties.width],
+            data[(x + 1) + y * properties.width]
+          );
+        } else {
+          t = tileset.getTile(i);
+        }
 
-      if (tileset) {
-        tileset.blit(
-          backgroundLayer, 
-          t, 
-          x * properties.drawSize, 
-          y * properties.drawSize, 
-          properties.tileSize, 
-          properties.drawSize, 
-          properties.drawSize
-        );
-      }
-    });
+        if (tileset) {
+          tileset.blit(
+            backgroundLayer, 
+            t, 
+            x * properties.drawSize, 
+            y * properties.drawSize, 
+            properties.tileSize, 
+            properties.drawSize, 
+            properties.drawSize
+          );
+        }
+      });
+    }
 
     //Blit background to the main layer
     cpyTile(x, y, backgroundLayer);
+
+    cpyTile(x, y, bloodLayer);
 
 
     if (enableIndicators) {
@@ -372,6 +405,8 @@ me.Map = function (attributes, tileset) {
     actor.on('Frozen', redrawActor);
     
     actor.on('Kill', function () {
+      //Draw some blood
+      blitRaw(actor.pos(), tileset.getTile(3), bloodLayer);
       //clear(actor.pos(), spriteLayer);
       redrawActors();
       //redraw(actor.pos());
@@ -432,9 +467,9 @@ me.Map = function (attributes, tileset) {
       tctx.font = "14px 'Patrick Hand', serif";
 
       tctx.fillText (
-        t.properties.duration, 
-        (t.pos().x * properties.drawSize) + (properties.drawSize - (properties.drawSize / 2)), 
-        (t.pos().y * properties.drawSize) + (properties.drawSize - 12)
+        'Trap ' + t.properties.duration, 
+        (t.pos().x * properties.drawSize) + (properties.drawSize - (properties.drawSize / 2)) - 15, 
+        (t.pos().y * properties.drawSize) + (properties.drawSize - 24)
       );
 
       redraw(t.properties.pos.x, t.properties.pos.y);
@@ -478,9 +513,10 @@ me.Map = function (attributes, tileset) {
   /////////////////////////////////////////////////////////////////////////////
 
   //Init everything
-  trapLayer.width = projectileLayer.width = backgroundLayer.width = indicatorLayer.width = spriteLayer.width = canvas.width = properties.width * properties.drawSize;
-  trapLayer.height = projectileLayer.height = backgroundLayer.height = indicatorLayer.height = spriteLayer.height = canvas.height = properties.height * properties.drawSize;
+  bloodLayer.width = trapLayer.width = projectileLayer.width = backgroundLayer.width = indicatorLayer.width = spriteLayer.width = canvas.width = properties.width * properties.drawSize;
+  bloodLayer.height = trapLayer.height = projectileLayer.height = backgroundLayer.height = indicatorLayer.height = spriteLayer.height = canvas.height = properties.height * properties.drawSize;
 
+  bloodLayer.getContext('2d').imageSmoothingEnabled = false;
   backgroundLayer.getContext('2d').imageSmoothingEnabled = false;
   projectileLayer.getContext('2d').imageSmoothingEnabled = false;
   spriteLayer.getContext('2d').imageSmoothingEnabled = false;
@@ -488,7 +524,7 @@ me.Map = function (attributes, tileset) {
   ctx.imageSmoothingEnabled = false;
 
   for (var i = 0; i < properties.width * properties.height; i++) {
-    data.push(0);
+    data.push(4);
   }
 
   exports = {

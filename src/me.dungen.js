@@ -122,7 +122,7 @@ me.DungeonGen = function (map) {
       hx = Math.floor((tx - fx) / 2);
 
       //Go right first, until we're halfway there
-      for (var i = -1; i <= hx + 1; i++) {
+      for (var i = -1; i <= hx + 2; i++) {
         map.data.set(fx + i, fy , 5);
         map.data.set(fx + i, fy + 1, 5);
       }
@@ -156,7 +156,7 @@ me.DungeonGen = function (map) {
         });
         connectChildren();
       } else {        
-        console.log('Final room size', width, height);
+       // console.log('Final room size', width, height);
         roomWidth = width - (Math.round(Math.random() * (width / 2))) - 2;
         roomHeight = height - (Math.round(Math.random() * (height / 2))) - 2;
 
@@ -213,7 +213,7 @@ me.DungeonGen = function (map) {
     }
 
     function createWalls() {
-      var t;
+      var t, bc;
 
       for (var y = 0; y < map.properties.width; y++) {
         for (var x = 0; x < map.properties.height; x++) {
@@ -259,13 +259,16 @@ me.DungeonGen = function (map) {
 
       for (var y = 0; y < map.properties.width; y++) {
         for (var x = 0; x < map.properties.height; x++) {
+          bc = 0;
+
           t = map.data.get(x, y);
 
-          //If there is shadow 
+          //If there are 2 blanks and 2 walls adjacent, set t to 1
+          
 
           map.data.set(x, y, t);
           //If this is a wall, and there's ground below, add shadow
-          if (t === 1 && map.data.get(x, y + 1) === 0) {
+          if (t === 1 && (map.data.get(x, y + 1) === 0 || map.data.get(x, y + 1) === 4)) {
             map.data.set(x, y + 1, 2);
           }
         }

@@ -44,3 +44,11 @@ Next up is a line-of-sight type thing. I'm thinking a fog of war type thing.
 I think I'll just fill in the area outside of rooms/corridors as "not viewable", and the rest as "discoverable" during the generation. Then I'll do a limited flood fill based on the player position when it changes, to change "discoverable" to "viewable". Or something like that. 
 
 ![progress](progressgifs/05.tiletransitions.png)
+
+# Saturday 18:20
+
+A quick update this time - added fake lighting, blood splatter, and "center on player" camera.
+
+Getting ready to add some mobs that actually attacks to make it playable.
+
+![progress](06.fake.lighting.png)

@@ -105,8 +105,6 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
         x = x.x;
       }    
 
-      console.log('step', x, y);
-
       pos.x = x;
       pos.y = y;
 
